@@ -5,13 +5,13 @@ from langchain_core.messages import SystemMessage
 from typing import List
 from logging import getLogger
 
-from nodes import query_transformation_node, data_retrieval_node
+from config import ModelType, get_prompt_template, PromptTemplate
+from src.agent.nodes import query_transformation_node, data_retrieval_node
 from scripts.query_pinecone import query_pinecone
 
 from src.models.graph_state import GraphState
 from src.models.models import Message
 from src.utils.str_utils import messages_to_text
-from config import ModelType, get_prompt_template, PromptTemplate, get_function_template, FunctionTemplate
 
 logger = getLogger('decodata')
 
@@ -33,13 +33,15 @@ class Agent:
         workflow.add_node("query_transformation_node", query_transformation_node)
         workflow.add_node("data_retrieval_node", data_retrieval_node)
 
+        workflow.add_edge("query_transformation_node", "data_retrieval_node")
+
         workflow.set_entry_point("query_transformation_node")
         workflow.set_finish_point("data_retrieval_node")
         workflow = workflow.compile()
 
         return workflow
 
-    def generate_query(self, model_type: ModelType, messages):
+    def generate_query(self, messages):
         init_state = self._get_initial_state(
             [Message(role=message["role"], content=message["content"]) for message in messages])
 

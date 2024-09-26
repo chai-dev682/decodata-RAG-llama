@@ -38,3 +38,5 @@ def get_prompt_template(prompt_template: PromptTemplate):
 def get_function_template(function_template: FunctionTemplate):
     with open(join(FUNCTIONS, function_template.value), "r") as f:
         return json.load(f)
+
+load_env()

@@ -8,5 +8,5 @@ class Roles(Enum):
     SYSTEM = "system"
 
 class Message(BaseModel):
-    role: str
+    role: Roles
     content: str
