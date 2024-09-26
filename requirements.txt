@@ -6,6 +6,7 @@ python-dotenv
 streamlit
 streamlit_chat
 langgraph
+langchain_core
 langchain_openai
 aiohttp
 beautifulsoup4

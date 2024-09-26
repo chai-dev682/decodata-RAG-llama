@@ -20,7 +20,7 @@ def read_root(request: Request):
 
 @app.post("/prompt")
 def process_prompt(messages: List[Message]):
-    response = agent.ask(query_type="test", messages=messages, model_type=ModelType.gpt4o)
+    response = agent.invoke(messages=messages, model_type=ModelType.gpt4o)
     return {"response": response}
 
 

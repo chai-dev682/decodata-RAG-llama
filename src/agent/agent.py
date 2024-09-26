@@ -1,98 +1,60 @@
-from concurrent.futures.thread import ThreadPoolExecutor
+from langchain_openai import ChatOpenAI
+
+from langgraph.graph import StateGraph
+from langchain_core.messages import SystemMessage
+from typing import List
 from logging import getLogger
-from typing import List, Union
 
-import json
+from nodes import query_transformation_node, data_retrieval_node
+from scripts.query_pinecone import query_pinecone
 
-from openai import OpenAI, AsyncOpenAI
-
-from config import PromptTemplate, get_prompt_template, ModelType, get_function_template, FunctionTemplate
+from src.models.graph_state import GraphState
+from src.models.models import Message
+from src.utils.str_utils import messages_to_text
+from config import ModelType, get_prompt_template, PromptTemplate, get_function_template, FunctionTemplate
 
 logger = getLogger('decodata')
 
 
 class Agent:
 
-    def __del__(self):
-        self.pool.shutdown(wait=False, cancel_futures=True)
-
     def __init__(self):
+        self.data_retrieval_graph = self._build_data_retrieval_graph()
         logger.debug("Initializing Agent")
-        self.pool = ThreadPoolExecutor()
-        self.client = OpenAI()
-        self.async_client = AsyncOpenAI()
-        self.cache = {}
         self.system_prompt = get_prompt_template(PromptTemplate.SYSTEM_PROMPT)
 
-    def embedding(self, input_str: str, model=ModelType.embedding) -> List[float]:
-        return self.client.embeddings.create(input=[input_str], model=model).data[0].embedding
+    @staticmethod
+    def _get_initial_state(messages: List[Message]) -> GraphState:
+        return GraphState(messages=messages)
 
-    def embeddings(self, inputs: List[str], model=ModelType.embedding) -> Union[List[float], List[List[float]]]:
-        return [d.embedding for d in self.client.embeddings.create(input=inputs, model=model).data]
+    @staticmethod
+    def _build_data_retrieval_graph():
+        workflow = StateGraph(state_schema=GraphState)
+        workflow.add_node("query_transformation_node", query_transformation_node)
+        workflow.add_node("data_retrieval_node", data_retrieval_node)
 
-    def _do(self, model_type: ModelType, query_type, messages, user: str, json_response: bool = False) -> str:
-        logger.debug(f"{user}: {query_type} model={model_type}")
+        workflow.set_entry_point("query_transformation_node")
+        workflow.set_finish_point("data_retrieval_node")
+        workflow = workflow.compile()
 
-        if json_response:
-            completion = self.client.chat.completions.create(
-                model=model_type,
-                messages=messages,
-                response_format={"type": "json_object"},
-                user=user
-            )
-        else:
-            completion = self.client.chat.completions.create(
-                model=model_type,
-                messages=messages,
-                user=user)
-        response_obj = completion.model_dump()
-        response_obj['user'] = user
-        text = completion.choices[0].message.content
-        return text
+        return workflow
 
-    def determine_params(self, model_type: ModelType, messages):
-        response = self.client.chat.completions.create(
-            model=model_type,
-            messages=messages,
-            tools=get_function_template(FunctionTemplate.DETERMINE_PARAMS),
-            tool_choice={"type": "function", "function": {"name": "determine_params"}}
-        )
-        try:
-            params = json.loads(
-                json.loads(response.json())['choices'][0]['message']['tool_calls'][0]['function']['arguments'])
-        except:
-            params = {}
-        return params
+    def generate_query(self, model_type: ModelType, messages):
+        init_state = self._get_initial_state(
+            [Message(role=message["role"], content=message["content"]) for message in messages])
 
-    def determine_actions(self, model_type: ModelType, messages):
-        response = self.client.chat.completions.create(
-            model=model_type,
-            messages=messages,
-            tools=get_function_template(FunctionTemplate.DETERMINE_ACTIONS),
-            tool_choice="auto"
-        )
+        result = self.data_retrieval_graph.invoke(init_state)
+        return result
 
-        return json.loads(response.json())['choices'][0]
+    def retrieve_data(self, model_type: ModelType, query, conversation):
+        result = query_pinecone(query, top_k=1)
+        prompt = get_prompt_template(PromptTemplate.ANSWER).format(content=result,
+                                                                   conversation=messages_to_text(conversation))
+        model = ChatOpenAI(model=model_type)
+        answer = model.invoke([SystemMessage(prompt)]).content
 
-    def ask(
-            self,
-            query_type: str,
-            model_type: ModelType,
-            messages,
-            shadow_models: List[ModelType] = None,
-            user=None,
-            json_response: bool = False) -> str:
-        logger.debug(f"{user}: {query_type} {messages}")
-        messages.insert(0, {"role": "system", "content": self.system_prompt})
-        # params = self.shadow_wrapper(model_type, shadow_models, self.determine_params, messages)
-        response = self.shadow_wrapper(model_type, shadow_models, self.determine_actions, messages)
-        return response['message']["content"]
+        return answer
 
-        # return self.shadow_wrapper(model_type, shadow_models, self._do, query_type, messages, user, json_response)
-
-    def shadow_wrapper(self, model_type: ModelType, shadow_models: List[ModelType], fn, *args):
-        f = self.pool.submit(fn, model_type, *args)
-        if shadow_models:
-            for model in shadow_models:
-                self.pool.submit(fn, model, *args)
-        return f.result()
+    def invoke(self, model_type: ModelType, messages):
+        query_state = self.generate_query(messages)
+        return self.retrieve_data(model_type, query_state["query"], query_state["messages"])

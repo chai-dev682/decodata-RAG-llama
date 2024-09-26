@@ -1,0 +1,8 @@
+You need to generate user friendly response based on the following content and conversation between assistant and user
+Most content data will be text, but it can contain table data,
+
+Here is the content.
+{content}
+
+Here is the conversation.
+{conversation}

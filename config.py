@@ -22,6 +22,8 @@ class ModelType(str, Enum):
 
 class PromptTemplate(Enum):
     SYSTEM_PROMPT = 'system.txt'
+    QUERY_TRANSFER = "query_transformation.txt"
+    ANSWER = "answer.txt"
 
 
 class FunctionTemplate(Enum):
