@@ -1,13 +1,12 @@
 import os
-from os import environ
 import glob
 import nest_asyncio
 from typing import List, Dict
 
-nest_asyncio.apply()
-
 from llama_parse import LlamaParse
 from llama_index.core import Document
+
+nest_asyncio.apply()
 
 parser = LlamaParse(
     api_key=os.getenv("LLAMA_PARSE_API_KEY"),  # can also be set in your env as LLAMA_CLOUD_API_KEY
@@ -50,7 +49,7 @@ def parse_single_pdf(pdf_path: str) -> List[Document]:
     return documents
 
 
-def parse_pdfs_with_subdirectory_metadata(directory_path: str) -> Dict[str, List[Document]]:
+def parse_pdfs_with_subdirectory_metadata(directory_path: str) -> List[Document]:
     """
     Parses PDF documents from subdirectories, adding subdirectory name as metadata.
 
@@ -61,7 +60,7 @@ def parse_pdfs_with_subdirectory_metadata(directory_path: str) -> Dict[str, List
         A dictionary where keys are subdirectory names and values are lists of
         parsed Document objects with metadata.
     """
-    parsed_documents = {}
+    parsed_documents = []
 
     for subdir_name in os.listdir(directory_path):
         subdir_path = os.path.join(directory_path, subdir_name)
@@ -81,6 +80,6 @@ def parse_pdfs_with_subdirectory_metadata(directory_path: str) -> Dict[str, List
             for doc in documents:
                 doc.metadata = {"subdirectory": subdir_name}
 
-            parsed_documents[subdir_name] = documents
+            parsed_documents = parsed_documents + documents
 
     return parsed_documents

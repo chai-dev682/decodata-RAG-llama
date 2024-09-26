@@ -11,7 +11,7 @@ FUNCTIONS = join(PROJECT_ROOT, 'function_template')
 
 
 def load_env():
-    load_dotenv(join(PROJECT_ROOT, ".env"))
+    load_dotenv()
 
 
 class ModelType(str, Enum):

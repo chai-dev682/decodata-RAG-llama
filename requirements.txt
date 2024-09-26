@@ -9,3 +9,10 @@ langgraph
 langchain_openai
 aiohttp
 beautifulsoup4
+pinecone
+llama-index
+llama-parse
+llama-index-vector-stores-pinecone
+google-api-python-client
+protoc_gen_openapiv2
+grpcio
