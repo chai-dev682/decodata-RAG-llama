@@ -48,8 +48,8 @@ class Agent:
         result = self.data_retrieval_graph.invoke(init_state)
         return result
 
-    def retrieve_data(self, model_type: ModelType, query, conversation):
-        result = query_pinecone(query, top_k=1)
+    def retrieve_data(self, model_type: ModelType, query, subdirectory_name, conversation):
+        result = query_pinecone(query, subdirectory_name = subdirectory_name, top_k=1)
         prompt = get_prompt_template(PromptTemplate.ANSWER).format(content=result,
                                                                    conversation=messages_to_text(conversation))
         model = ChatOpenAI(model=model_type)
@@ -57,6 +57,6 @@ class Agent:
 
         return answer
 
-    def invoke(self, model_type: ModelType, messages):
+    def invoke(self, model_type: ModelType, messages, subdirectory_name):
         query_state = self.generate_query(messages)
-        return self.retrieve_data(model_type, query_state["query"], query_state["messages"])
+        return self.retrieve_data(model_type, query_state["query"], subdirectory_name, query_state["messages"])
