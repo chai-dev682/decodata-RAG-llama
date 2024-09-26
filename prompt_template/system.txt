@@ -1,0 +1,6 @@
+You need to determine role categories of website content.
+
+Here are web page content.
+URL: {url}
+
+Website Content: {website_content}

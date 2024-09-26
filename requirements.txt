@@ -1,0 +1,11 @@
+openai
+fastapi
+uvicorn
+pydantic
+python-dotenv
+streamlit
+streamlit_chat
+langgraph
+langchain_openai
+aiohttp
+beautifulsoup4
