@@ -19,7 +19,7 @@ This project is an AI-powered scraping engine built with Python 3.12, leveraging
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/austin-Q-ai/decodata-RAG-llama.git 
+   git clone https://github.com/chai-dev682/decodata-RAG-llama.git 
    ```
 2. Install the required packages:
    ```bash
